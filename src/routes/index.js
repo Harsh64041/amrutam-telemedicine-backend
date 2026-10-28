@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
 const doctorController = require('../controllers/doctorController');
@@ -18,37 +18,18 @@ const apiLimiter = rateLimit({
 
 router.use(apiLimiter);
 
-// 1. Auth & User Lifecycle
 router.post('/auth/register', authController.register);
 router.post('/auth/login', authController.login);
+router.get('/auth/profile', authenticate, authController.getProfile);
+router.post('/auth/mfa/setup', authenticate, requireIdempotency, authController.setupMfa);
 
-// 2. Doctor Availability & Search
 router.get('/doctors', doctorController.searchDoctors);
-router.post(
-  '/doctors/slots',
-  authenticate,
-  authorize('doctor'),
-  requireIdempotency,
-  doctorController.createSlot
-);
+router.post('/doctors/slots', authenticate, authorize('doctor'), requireIdempotency, doctorController.createSlot);
 
-// 3. Consultation Booking & Prescriptions (Idempotency Enforced)
-router.post(
-  '/consultations/book',
-  authenticate,
-  authorize('patient'),
-  requireIdempotency,
-  consultationController.bookConsultation
-);
-router.post(
-  '/consultations/:id/prescribe',
-  authenticate,
-  authorize('doctor'),
-  requireIdempotency,
-  consultationController.completeAndPrescribe
-);
+router.post('/consultations/book', authenticate, authorize('patient'), requireIdempotency, consultationController.bookConsultation);
+router.patch('/consultations/:id/status', authenticate, authorize('doctor', 'patient', 'admin'), requireIdempotency, consultationController.updateConsultationStatus);
+router.post('/consultations/:id/prescribe', authenticate, authorize('doctor'), requireIdempotency, consultationController.completeAndPrescribe);
 
-// 4. Admin Analytics & Compliance
 router.get('/admin/analytics', authenticate, authorize('admin'), adminController.getAnalytics);
 
 module.exports = router;
