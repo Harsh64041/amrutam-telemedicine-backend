@@ -1,0 +1,84 @@
+openapi: 3.0.3
+info:
+  title: Amrutam Telemedicine Backend API
+  version: 1.0.0
+  description: Production-grade Telemedicine API supporting 100k daily consultations.
+servers:
+  - url: http://localhost:3000/api/v1
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user (patient, doctor, admin)
+      responses:
+        '201':
+          description: User registered
+  /auth/login:
+    post:
+      summary: Authenticate user and return JWT
+      responses:
+        '200':
+          description: JWT Token
+  /doctors:
+    get:
+      summary: Search doctors by specialization and availability
+      parameters:
+        - in: query
+          name: specialization
+          schema:
+            type: string
+        - in: query
+          name: available
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of doctors with available slots
+  /doctors/slots:
+    post:
+      summary: Create availability slot (Doctor only, Idempotent)
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Slot created
+  /consultations/book:
+    post:
+      summary: Book a consultation slot (Patient only, ACID + Idempotent)
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Consultation booked
+        '409':
+          description: Slot already booked
+  /consultations/{id}/prescribe:
+    post:
+      summary: Complete consultation and issue prescription (Doctor only, Idempotent)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Prescription issued
+  /admin/analytics:
+    get:
+      summary: Get system analytics and audit trail summary (Admin only)
+      responses:
+        '200':
+          description: Analytics payload

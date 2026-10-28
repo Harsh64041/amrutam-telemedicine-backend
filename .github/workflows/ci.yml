@@ -1,0 +1,47 @@
+name: Amrutam Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: amrutam_user
+          POSTGRES_PASSWORD: amrutam_pass
+          POSTGRES_DB: amrutam_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Initialize Database Schema
+        env:
+          PGPASSWORD: amrutam_pass
+        run: psql -h localhost -U amrutam_user -d amrutam_db -f sql/init.sql
+      - name: Run Automated Tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://amrutam_user:amrutam_pass@localhost:5432/amrutam_db
+          JWT_SECRET: test_secret_key
+        run: npm test
+      - name: Security Dependency Audit
+        run: npm audit --audit-level=high || true
